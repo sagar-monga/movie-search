@@ -4,24 +4,26 @@ import 'movie_model.dart';
 
 class MovieCard extends StatelessWidget {
   final Movie movie;
-
-  const MovieCard({Key? key, required this.movie}) : super(key: key);
+  final Size size;
+  const MovieCard({Key? key, required this.movie, required this.size})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(5.0),
       child: Container(
-        padding: const EdgeInsets.only(bottom: 10.0),
-        margin: const EdgeInsets.only(left: 5, right: 5, bottom: 20),
+        // padding: const EdgeInsets.only(bottom: 10.0),
+        // padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
+        margin: const EdgeInsets.only(bottom: 20, left: 5, right: 5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(5.0),
           color: Colors.white,
           boxShadow: const [
             BoxShadow(
-              color: Colors.grey,
-              offset: Offset(0.0, 5.0),
-              blurRadius: 10.0,
+              color: Colors.grey, //Card shadow
+              offset: Offset(1.0, 5.0),
+              blurRadius: 2.0,
             ),
           ],
         ),
@@ -44,9 +46,10 @@ class MovieCard extends StatelessWidget {
                     color: Colors.grey,
                     boxShadow: const [
                       BoxShadow(
-                          color: Colors.black,
-                          blurRadius: 5.0,
-                          offset: Offset(2.0, 5.0))
+                        color: Colors.black, // Poster shadow
+                        blurRadius: 10.0,
+                        offset: Offset(5.0, 5.0),
+                      ),
                     ],
                   ),
                 ),
@@ -72,10 +75,10 @@ class MovieCard extends StatelessWidget {
                       //   style: const TextStyle(
                       //       color: Color(0xff8785A4), fontFamily: 'Arvo'),
                       // ),
-                      const Padding(padding: EdgeInsets.all(2.0)),
+                      const Padding(padding: EdgeInsets.all(5.0)),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                            horizontal: 15, vertical: 5),
                         child: Text(
                           movie.year,
                           maxLines: 2,

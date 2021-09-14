@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:movie_search/movie_model.dart';
 
@@ -40,11 +41,27 @@ class _HomeScreenState extends State<HomeScreen> {
     String url =
         "https://www.omdbapi.com/?s=$term&page=1&type=movie&apikey=bfb026bf";
     final response = await http.get(Uri.parse(url));
+    // print(response.body);
     if (response.statusCode == 200) {
       // print('Successful fetch');
       final result = jsonDecode(response.body);
-      Iterable list = result["Search"];
-      return list.map((movie) => Movie.fromJson(movie)).toList();
+      if (result["Response"] == "True") {
+        Iterable list = result["Search"];
+
+        return list.map((movie) => Movie.fromJson(movie)).toList();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("No movies found with the given name!"),
+            backgroundColor: Colors.teal,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+            ),
+          ),
+        );
+        throw Exception("Invalid search string!");
+      }
     } else {
       throw Exception("Failed to lead Movies");
     }
@@ -63,18 +80,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _listMovies("Fast");
   }
 
+  Size _size = const Size(0, 0);
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return <Widget>[
-            searchBar(),
-          ];
-        },
-        body: _movies != []
-            ? MovieWidget(movies: _movies)
-            : const Center(child: Text("No Movies Found")),
+    _size = MediaQuery.of(context).size;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+      ),
+      child: Scaffold(
+        body: NestedScrollView(
+          physics: const ClampingScrollPhysics(),
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return <Widget>[
+              searchBar(),
+            ];
+          },
+          body: _movies != []
+              ? MovieWidget(
+                  movies: _movies,
+                  size: _size,
+                )
+              : const Center(child: Text("No Movies Found")),
+        ),
       ),
     );
   }
@@ -84,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
       title: Column(
         children: const [
           Padding(
-            padding: EdgeInsets.only(left: 20),
+            // padding: EdgeInsets.only(left: _size.width * 0.01),
+            padding: EdgeInsets.only(left: 5),
             child: Text(
               "Home",
               style: TextStyle(
@@ -98,11 +127,11 @@ class _HomeScreenState extends State<HomeScreen> {
       flexibleSpace: FlexibleSpaceBar(
         background: Column(
           children: <Widget>[
-            const SizedBox(height: 120.0),
+            SizedBox(height: _size.height * 0.15),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
+              padding: EdgeInsets.symmetric(horizontal: _size.width * 0.05),
               child: Container(
-                height: 70.0,
+                height: 60,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   border: Border.all(
@@ -141,8 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      toolbarHeight: 120,
-      expandedHeight: 250,
+      toolbarHeight: _size.height * 0.1,
+      expandedHeight: _size.height * 0.3,
       floating: true,
       backgroundColor: Colors.white,
     );
