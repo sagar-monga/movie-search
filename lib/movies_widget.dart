@@ -20,6 +20,7 @@ class MovieWidget extends StatelessWidget {
           return MovieCard(
             movie: movie,
             size: size,
+            index:index,
           );
         });
   }

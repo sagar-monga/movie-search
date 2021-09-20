@@ -1,45 +1,27 @@
-import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:movie_search/movie_model.dart';
-
+import 'package:movie_search/constants.dart';
+import 'initial_body.dart';
+import 'movie_model.dart';
 import 'movies_widget.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class NewHome extends StatefulWidget {
+  const NewHome({Key? key}) : super(key: key);
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  _NewHomeState createState() => _NewHomeState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // late Future<Movie> movies;
-
-  // var movies1;
-  // Future<Map> getJson() async {
-  //   var url = "http://www.omdbapi.com/?apikey=bfb026bf&t=fast";
-  //   http.Response response = await (http.get(Uri.parse(url)));
-  //   debugPrint("Response is " + response.body);
-  //   // return Movie.fromJson(jsonDecode(response.body));
-
-  //   return json.decode(response.body);
-  // }
-
-  // Future<void> getData() async {
-  //   var data = await getJson();
-  //   setState(() {
-  //     movies1 = data['results'];
-  //   });
-  // }
-
+class _NewHomeState extends State<NewHome> {
   final TextEditingController _searchController = TextEditingController();
-  List<Movie> _movies = [];
 
   Future<List<Movie>> _fetchAllMovies(String term) async {
+    _firstLoad = false;
     String url =
-        "https://www.omdbapi.com/?s=$term&page=1&type=movie&apikey=bfb026bf";
+        "https://www.omdbapi.com/?s=$term&page=1&type=movie&apikey=$apiKey";
     final response = await http.get(Uri.parse(url));
     // print(response.body);
     if (response.statusCode == 200) {
@@ -51,36 +33,34 @@ class _HomeScreenState extends State<HomeScreen> {
         return list.map((movie) => Movie.fromJson(movie)).toList();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("No movies found with the given name!"),
-            backgroundColor: Colors.teal,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-            ),
-          ),
+          _errorSnackbar(),
         );
         // throw Exception("Invalid search string!");
         return [];
       }
     } else {
-      throw Exception("Failed to lead Movies");
+      return [];
+      // throw Exception("Failed to lead Movies");
     }
   }
 
-  void _listMovies(String term) async {
-    if (term != "") {
-      final movies = await _fetchAllMovies(term);
-      setState(() {
-        _movies = movies;
-      });
-    }
+  SnackBar _errorSnackbar() {
+    return const SnackBar(
+      content: Text("No movies found with the given name!"),
+      backgroundColor: Colors.teal,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+    );
   }
+
+  bool _firstLoad = true;
 
   @override
   initState() {
     super.initState();
-    _listMovies("Fast");
+    // _fetchAllMovies("Fast");
   }
 
   Size _size = const Size(0, 0);
@@ -92,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         statusBarColor: Colors.white,
       ),
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: NestedScrollView(
           physics: const ClampingScrollPhysics(),
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
@@ -99,12 +80,50 @@ class _HomeScreenState extends State<HomeScreen> {
               searchBar(),
             ];
           },
-          body: _movies != []
-              ? MovieWidget(
-                  movies: _movies,
-                  size: _size,
-                )
-              : const Center(child: Text("No Movies Found")),
+          body: _firstLoad
+              ? const InitialBody()
+              : FutureBuilder(
+                  future: _fetchAllMovies(_searchController.text),
+                  builder:
+                      (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                    if (snapshot.hasData) {
+                      if (snapshot.data.length == 0) {
+                        return Center(
+                          child: Column(
+                            children: const [
+                              SizedBox(
+                                height: 50,
+                              ),
+                              Text(
+                                "Uh-oh",
+                                style: TextStyle(fontSize: 36),
+                              ),
+                              SizedBox(
+                                height: 10,
+                              ),
+                              Text(
+                                "No Movies found with this name",
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return MovieWidget(movies: snapshot.data, size: _size);
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          children: const [
+                            Text("Uh-oh"),
+                            Text("No Movies Found"),
+                          ],
+                        ),
+                      );
+                    }
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                ),
         ),
       ),
     );
@@ -115,7 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
       title: Column(
         children: const [
           Padding(
-            // padding: EdgeInsets.only(left: _size.width * 0.01),
             padding: EdgeInsets.only(left: 5),
             child: Text(
               "Home",
@@ -162,11 +180,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       color: Colors.black,
                       onPressed: () {
-                        // print(_searchController.text);
-                        _listMovies(_searchController.text);
+                        setState(() {
+                          _fetchAllMovies(_searchController.text);
+                        });
                       },
                     ),
                   ),
+                  onSubmitted: (String value) {
+                    setState(() {
+                      _fetchAllMovies(_searchController.text);
+                    });
+                  },
                 ),
               ),
             ),
@@ -181,9 +205,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   OutlineInputBorder textfieldOutline() {
-    // ignore: prefer_const_constructors
-    return OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.transparent),
+    return const OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.transparent),
     );
   }
 }
